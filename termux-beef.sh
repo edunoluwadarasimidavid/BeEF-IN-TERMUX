@@ -23,6 +23,7 @@ fatal() {
 }
 
 RUBYSUFFIX=''
+SKIP_UPDATE=false
 
 command_exists() {
 	command -v "${1}" >/dev/null 2>&1
@@ -57,6 +58,24 @@ get_permission() {
 }
 
 # ──────────────────────────────────────────────
+# STEP 2b: Optional package update
+# ──────────────────────────────────────────────
+ask_update_packages() {
+	echo
+	info "Do you want to update Termux packages before installing?"
+	info "Recommended on first run. Safe to skip if already updated."
+	echo
+	read -rp "Update packages now? (Y/n) "
+	if [ "$(echo "${REPLY}" | tr "[:upper:]" "[:lower:]")" = "n" ]; then
+		info "Skipping package update."
+		SKIP_UPDATE=true
+	else
+		info "Packages will be updated before install."
+		SKIP_UPDATE=false
+	fi
+}
+
+# ──────────────────────────────────────────────
 # STEP 3: OS check — Termux only
 # ──────────────────────────────────────────────
 check_os() {
@@ -82,27 +101,26 @@ check_os() {
 # STEP 4: Install all Termux dependencies
 # ──────────────────────────────────────────────
 install_termux() {
-	info "Updating Termux packages..."
-	pkg update -y && pkg upgrade -y
+	if [ "${SKIP_UPDATE}" = false ]; then
+		info "Updating Termux packages..."
+		pkg update -y && pkg upgrade -y
+	else
+		info "Skipped package update."
+	fi
 
 	info "Installing required system dependencies..."
 	pkg install -y \
 		ruby \
-		ruby-dev \
 		curl \
 		git \
 		nodejs \
 		python3 \
 		openssl \
-		openssl-dev \
 		readline \
 		libyaml \
-		libyaml-dev \
 		libsqlite \
 		libxml2 \
-		libxml2-dev \
 		libxslt \
-		libxslt-dev \
 		autoconf \
 		ncurses \
 		automake \
@@ -203,19 +221,20 @@ fix_problem_gems() {
 # ──────────────────────────────────────────────
 install_beef() {
 	info "Installing all required Ruby gems via bundler..."
-	info "Note: This can take 10–30 minutes on mobile. Do NOT close Termux."
+	info "Note: This can take 10-30 minutes on mobile. Do NOT close Termux."
 
 	if [ -w Gemfile.lock ]; then
 		rm Gemfile.lock
 	fi
 
 	# Set build flags for all native gems
-	bundle config set --local build.nokogiri \
-		"--use-system-libraries --with-cflags='-Wno-implicit-function-declaration -Wno-deprecated-declarations -Wno-incompatible-function-pointer-types'"
-	bundle config set --local build.eventmachine \
-		"--with-cflags='-Wno-error=implicit-function-declaration' --with-openssl-dir=$PREFIX"
-	bundle config set --local build.thin \
-		"--with-cflags='-Wno-error=implicit-function-declaration'"
+	NOKOGIRI_FLAGS="--use-system-libraries --with-cflags=-Wno-implicit-function-declaration"
+	EM_FLAGS="--with-cflags=-Wno-error=implicit-function-declaration --with-openssl-dir=$PREFIX"
+	THIN_FLAGS="--with-cflags=-Wno-error=implicit-function-declaration"
+
+	bundle config set --local build.nokogiri "$NOKOGIRI_FLAGS"
+	bundle config set --local build.eventmachine "$EM_FLAGS"
+	bundle config set --local build.thin "$THIN_FLAGS"
 
 	if command_exists bundle${RUBYSUFFIX}; then
 		bundle${RUBYSUFFIX} install
@@ -229,24 +248,22 @@ install_beef() {
 # ──────────────────────────────────────────────
 finish() {
 	echo
-	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
+	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
 	echo
-	info "termux-beef — Created by Edun Oluwadarasimi David"
-	info "YouTube : https://youtube.com/@smarttechprogramming"
-	info "GitHub  : https://github.com/edunoluwadarasimidavid/BeEF-IN-TERMUX"
+	info "termux-beef by Edun Oluwadarasimi David"
+	info "YouTube : @smarttechprogramming"
+	info "GitHub  : BeEF-IN-TERMUX"
 	echo
 	info "BeEF installed successfully!"
 	echo
 	echo "Next steps:"
 	echo "  1. cd ~/beef"
-	echo "  2. Change the default password in config.yaml"
-	echo "  3. Run: ./beef"
-	echo "  4. Open browser → http://127.0.0.1:3000/ui/panel"
-	echo "  5. Default login: beef / beef"
+	echo "  2. nano config.yaml  (change password)"
+	echo "  3. ./beef"
+	echo "  4. http://127.0.0.1:3000/ui/panel"
+	echo "  5. Login: beef / beef"
 	echo
-	echo "  Wiki: https://github.com/beefproject/beef/wiki/Configuration"
-	echo
-	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
+	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
 	echo
 	cd ..
 	# Only move if not already in home
@@ -262,17 +279,18 @@ finish() {
 main() {
 	clear
 
-	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
-	echo "              -- [ termux-beef Installer ] --                    "
-	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
+	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
+	echo "    -- [ termux-beef Installer ] --    "
+	echo "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#"
 	echo
-	info "Created by Edun Oluwadarasimi David"
-	info "YouTube : https://youtube.com/@smarttechprogramming"
-	info "GitHub  : https://github.com/edunoluwadarasimidavid/BeEF-IN-TERMUX"
+	info "By Edun Oluwadarasimi David"
+	info "YT: @smarttechprogramming"
+	info "GH: BeEF-IN-TERMUX"
 	echo
 
 	check_termux_storage
 	get_permission
+	ask_update_packages
 	check_os
 	check_ruby_version
 	update_rubygems
