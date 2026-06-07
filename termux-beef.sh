@@ -215,9 +215,10 @@ fix_problem_gems() {
 		--with-openssl-dir="$PREFIX" \
 		|| warn "eventmachine pre-install failed — bundle install will retry."
 
-	# Fix curb — needs to find Termux's libcurl headers
-	info "Installing curb with curl fix..."
-	gem install curb -- \
+	# Fix curb — v1.3.5 breaks on Ruby 3.4 (removed rb_thread_blocking_region)
+	# v1.0.5 is the last version that builds clean on Termux
+	info "Installing curb 1.0.5 with curl fix..."
+	gem install curb -v 1.0.5 -- \
 		--with-curl-dir="$PREFIX" \
 		--with-curl-lib="$PREFIX/lib" \
 		--with-curl-include="$PREFIX/include" \
@@ -245,6 +246,9 @@ install_beef() {
 	bundle config set --local build.eventmachine "$EM_FLAGS"
 	bundle config set --local build.thin "$THIN_FLAGS"
 	bundle config set --local build.curb "$CURB_FLAGS"
+
+	# Force bundler to use curb 1.0.5 (1.3.5 breaks on Ruby 3.4 + Termux)
+	bundle config set --local gem.curb "1.0.5"
 
 	if command_exists bundle${RUBYSUFFIX}; then
 		bundle${RUBYSUFFIX} install
