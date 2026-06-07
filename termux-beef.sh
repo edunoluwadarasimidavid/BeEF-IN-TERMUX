@@ -214,6 +214,14 @@ fix_problem_gems() {
 		--with-cflags="-Wno-error=implicit-function-declaration" \
 		--with-openssl-dir="$PREFIX" \
 		|| warn "eventmachine pre-install failed — bundle install will retry."
+
+	# Fix curb — needs to find Termux's libcurl headers
+	info "Installing curb with curl fix..."
+	gem install curb -- \
+		--with-curl-dir="$PREFIX" \
+		--with-curl-lib="$PREFIX/lib" \
+		--with-curl-include="$PREFIX/include" \
+		|| warn "curb pre-install failed — bundle install will retry."
 }
 
 # ──────────────────────────────────────────────
@@ -231,10 +239,12 @@ install_beef() {
 	NOKOGIRI_FLAGS="--use-system-libraries --with-cflags=-Wno-implicit-function-declaration"
 	EM_FLAGS="--with-cflags=-Wno-error=implicit-function-declaration --with-openssl-dir=$PREFIX"
 	THIN_FLAGS="--with-cflags=-Wno-error=implicit-function-declaration"
+	CURB_FLAGS="--with-curl-dir=$PREFIX --with-curl-lib=$PREFIX/lib --with-curl-include=$PREFIX/include"
 
 	bundle config set --local build.nokogiri "$NOKOGIRI_FLAGS"
 	bundle config set --local build.eventmachine "$EM_FLAGS"
 	bundle config set --local build.thin "$THIN_FLAGS"
+	bundle config set --local build.curb "$CURB_FLAGS"
 
 	if command_exists bundle${RUBYSUFFIX}; then
 		bundle${RUBYSUFFIX} install
